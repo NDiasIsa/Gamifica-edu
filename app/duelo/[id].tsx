@@ -14,6 +14,7 @@ import { subjects } from '@/data/mock';
 import { buildDuelRound, duelXpStake } from '@/lib/duel';
 import { formatNumber } from '@/lib/progression';
 import { useGame, type DuelResult } from '@/store/GameProvider';
+import { useSchool } from '@/store/SchoolProvider';
 
 const outcomeMeta = {
   won: { title: 'VITÓRIA!', color: colors.accent.success },
@@ -25,12 +26,13 @@ export default function DuelScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { student, avatar, challenges, getClassmate, finishDuel } = useGame();
+  const { flashcards } = useSchool();
 
   const challenge = challenges.find((item) => item.id === id);
   const rival = challenge ? getClassmate(challenge.rivalId) : undefined;
 
   const [questions] = useState(() =>
-    challenge ? buildDuelRound(challenge.subjectId, challenge.questionCount) : [],
+    challenge ? buildDuelRound(flashcards, challenge.subjectId, challenge.questionCount) : [],
   );
   const score = useRef(0);
   const [hits, setHits] = useState(0);

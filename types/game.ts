@@ -28,6 +28,8 @@ export type StudyStep = {
 
 export type Activity = {
   id: string;
+  /** Turma que recebe a atividade. */
+  classId: string;
   subjectId: SubjectId;
   title: string;
   description: string;
@@ -35,19 +37,30 @@ export type Activity = {
   /** Ex.: "3 etapas", "10 questões". */
   size: string;
   steps: StudyStep[];
+  /** Rascunhos só aparecem para o professor. */
+  status: 'published' | 'draft';
+  /** Ex.: "20/09 · 23:59". */
+  dueLabel?: string;
 };
 
-export type Student = {
+/** Dados do aluno logado guardados no app (o XP fica no cadastro da escola). */
+export type StudentState = {
+  id: string;
   name: string;
   title: string;
-  classroom: string;
+  classId: string;
   coins: number;
-  streakDays: number;
-  subjectXp: Record<SubjectId, number>;
   /** IDs das etapas já estudadas. */
   completedStepIds: string[];
   ownedCosmeticIds: string[];
   equippedCosmetics: Record<CosmeticCategory, string>;
+};
+
+/** Aluno logado com os dados que vêm da escola já resolvidos. */
+export type Student = StudentState & {
+  classroom: string;
+  streakDays: number;
+  subjectXp: Record<SubjectId, number>;
 };
 
 // ---------------------------------------------------------------------------
@@ -136,19 +149,103 @@ export type Cosmetic = {
   look: Partial<AvatarPalette>;
   /** Cor do brilho atrás do personagem na pré-visualização (fundos). */
   glow?: string;
+  /** Itens desativados pelo professor ficam ocultos na loja. */
+  active: boolean;
+  /** Vendas no mês (painel do professor). */
+  sales: number;
 };
 
-export type Classmate = {
+// ---------------------------------------------------------------------------
+// Escola (visão do professor)
+// ---------------------------------------------------------------------------
+
+export type Teacher = {
+  name: string;
+  avatar: AvatarPalette;
+};
+
+export type SchoolClass = {
   id: string;
   name: string;
-  classroom: string;
-  xp: number;
+  /** Ex.: "7B" (selo colorido na gestão de turmas). */
+  shortName: string;
+  color: string;
+  depthColor: string;
+  inviteCode: string;
+  /** Turmas de outros professores aparecem só no ranking da instituição. */
+  managed: boolean;
+  /** 0..1 */
+  weeklyEngagement: number;
+  /** 0..1 */
+  averageAccuracy: number;
+  weeklyXp: number;
+  /** Acertos por matéria nos últimos 7 dias (0..1). */
+  accuracyBySubject: Record<SubjectId, number>;
+};
+
+export type RosterStudent = {
+  id: string;
+  name: string;
+  classId: string;
+  enrollment: string;
+  guardianEmail?: string;
   avatar: AvatarPalette;
+  subjectXp: Record<SubjectId, number>;
+  /** null = ainda não acessou o app. */
+  lastActiveDaysAgo: number | null;
+  streakDays: number;
+  delivered: number;
+  assigned: number;
+  late: number;
+  /** 0..1 */
+  flashcardAccuracy: number;
+};
+
+export type SubmissionStatus = 'pending' | 'approved' | 'revision';
+
+export type Submission = {
+  id: string;
+  studentId: string;
+  activityId: string;
+  stepId: string;
+  fileName: string;
+  fileInfo: string;
+  /** Ex.: "há 2h", "ontem". */
+  sentLabel: string;
+  isNew?: boolean;
+  status: SubmissionStatus;
+  grade?: number;
+  comment?: string;
+  xpAwarded?: number;
+};
+
+export type LateDelivery = {
+  id: string;
+  studentId: string;
+  activityId: string;
+  dueLabel: string;
+  reminded?: boolean;
+};
+
+/** Aviso que o professor manda para o aluno (mensagem, XP bônus, correção). */
+export type StudentNotice = {
+  id: string;
+  studentId: string;
+  kind: 'message' | 'bonus' | 'grade';
+  title: string;
+  body: string;
+  read: boolean;
 };
 
 export type RankingScope = 'turma' | 'instituicao';
 
-export type RankingEntry = Classmate & {
+export type RankingEntry = {
+  id: string;
+  name: string;
+  classId: string;
+  classroom: string;
+  xp: number;
+  avatar: AvatarPalette;
   isCurrentStudent?: boolean;
 };
 

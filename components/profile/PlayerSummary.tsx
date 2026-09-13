@@ -23,7 +23,7 @@ export function PlayerSummary({ student, totalXp, level, classPosition }: Player
           <Text style={styles.name} numberOfLines={2}>
             {student.name}
           </Text>
-          <Text style={styles.classroom}>{student.classroom}</Text>
+          <Text style={styles.classroom}>{student.title}</Text>
         </View>
 
         <View style={styles.xpBlock}>

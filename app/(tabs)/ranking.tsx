@@ -20,7 +20,7 @@ import type { RankingScope } from '@/types/game';
 export default function RankingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { student, rankings, positions, challenges, getClassmate } = useGame();
+  const { student, rankings, positions, challenges, getClassmate, canChallenge } = useGame();
   const [scope, setScope] = useState<RankingScope>('turma');
   const [duelRivalId, setDuelRivalId] = useState<string | null>(null);
   const [challengesOpen, setChallengesOpen] = useState(false);
@@ -79,6 +79,7 @@ export default function RankingScreen() {
               position={index + 1}
               movement={entry.isCurrentStudent ? season.startPosition[scope] - positions[scope] : 0}
               challengeState={entry.isCurrentStudent ? 'none' : challengeStateFor(entry.id)}
+              canChallenge={canChallenge(entry.id)}
               onChallenge={() => setDuelRivalId(entry.id)}
               onOpenChallenges={() => setChallengesOpen(true)}
             />

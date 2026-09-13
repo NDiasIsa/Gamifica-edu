@@ -9,16 +9,15 @@ import { Icon } from '@/components/ui/Icon';
 import { detailGlows, ScreenBackground } from '@/components/ui/ScreenBackground';
 import { STICKY_FOOTER_SPACE, StickyFooter } from '@/components/ui/StickyFooter';
 import { colors, fonts } from '@/constants/theme';
-import { getActivity } from '@/data/mock';
 import { useGame } from '@/store/GameProvider';
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { student, completeStep } = useGame();
+  const { student, activities, completeStep } = useGame();
 
-  const activity = getActivity(id);
+  const activity = activities.find((item) => item.id === id);
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 

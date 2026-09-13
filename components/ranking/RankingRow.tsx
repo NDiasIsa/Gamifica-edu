@@ -14,6 +14,8 @@ type RankingRowProps = {
   /** Só para a aluna atual: posições ganhas (+) ou perdidas (−) na temporada. */
   movement?: number;
   challengeState: RowChallengeState;
+  /** Só colegas da mesma turma podem ser desafiados. */
+  canChallenge: boolean;
   onChallenge: () => void;
   onOpenChallenges: () => void;
 };
@@ -26,7 +28,15 @@ const podium = [
 
 const CHALLENGE_TEXT = '#F0ABFC';
 
-export function RankingRow({ entry, position, movement = 0, challengeState, onChallenge, onOpenChallenges }: RankingRowProps) {
+export function RankingRow({
+  entry,
+  position,
+  movement = 0,
+  challengeState,
+  canChallenge,
+  onChallenge,
+  onOpenChallenges,
+}: RankingRowProps) {
   const medal = podium[position - 1];
   const isMe = entry.isCurrentStudent;
 
@@ -54,7 +64,7 @@ export function RankingRow({ entry, position, movement = 0, challengeState, onCh
         </View>
       );
     }
-    if (challengeState !== 'none') {
+    if (canChallenge && challengeState !== 'none') {
       return (
         <View style={styles.subtitleRow}>
           <Glyph name="sword" size={12} strokeWidth={2.8} color={CHALLENGE_TEXT} />
@@ -82,6 +92,7 @@ export function RankingRow({ entry, position, movement = 0, challengeState, onCh
       <Text style={styles.xp}>{formatNumber(entry.xp)} XP</Text>
 
       {!isMe &&
+        canChallenge &&
         (challengeState === 'sent' ? (
           <Pressable
             onPress={onOpenChallenges}

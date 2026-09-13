@@ -17,7 +17,8 @@ type CosmeticCardProps = {
   onPress: () => void;
 };
 
-function Thumbnail({ item, palette }: { item: Cosmetic; palette: AvatarPalette }) {
+/** Miniatura do item (parte do personagem ou amostra do fundo). Também usada na gestão da loja. */
+export function Thumbnail({ item, palette }: { item: Pick<Cosmetic, 'category'>; palette: AvatarPalette }) {
   switch (item.category) {
     case 'chapeus':
       return <PixelSprite palette={palette} part="hat" size={25} />;

@@ -7,6 +7,8 @@ import { formatNumber } from '@/lib/progression';
 type CurrencyBarProps = {
   streakDays: number;
   coins: number;
+  /** Avisos do professor ainda não lidos (bolinha no sino). */
+  unreadNotices?: number;
   onPressNotifications?: () => void;
 };
 
@@ -19,15 +21,16 @@ function StatChip({ icon, value, color, label }: { icon: IconName; value: string
   );
 }
 
-export function CurrencyBar({ streakDays, coins, onPressNotifications }: CurrencyBarProps) {
+export function CurrencyBar({ streakDays, coins, unreadNotices = 0, onPressNotifications }: CurrencyBarProps) {
   return (
     <View style={styles.bar}>
       <Pressable
         style={({ pressed }) => [styles.bell, pressed && styles.pressed]}
         onPress={onPressNotifications}
         accessibilityRole="button"
-        accessibilityLabel="Notificações">
+        accessibilityLabel={unreadNotices > 0 ? `Notificações, ${unreadNotices} novas` : 'Notificações'}>
         <Icon name="bell" size={20} />
+        {unreadNotices > 0 && <View style={styles.badge} />}
       </Pressable>
       <StatChip
         icon="flame"
@@ -61,6 +64,17 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  badge: {
+    position: 'absolute',
+    right: 6,
+    top: 6,
+    width: 9,
+    height: 9,
+    borderRadius: 99,
+    borderWidth: 2,
+    borderColor: colors.bg.surface2,
+    backgroundColor: colors.brand.magenta,
   },
   chip: {
     flexDirection: 'row',

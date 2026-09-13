@@ -1,21 +1,15 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { createInitialCardProgress } from '@/data/flashcards';
-import {
-  classmates,
-  CURRENT_STUDENT_ID,
-  getActivity,
-  initialChallenges,
-  initialFlashcardDaily,
-  initialStudent,
-  rankingMembers,
-} from '@/data/mock';
-import { getCosmetic } from '@/data/cosmetics';
+import { CURRENT_STUDENT_ID, initialChallenges, initialFlashcardDaily, initialStudent } from '@/data/mock';
 import { buildAvatar } from '@/lib/cosmetics';
 import { duelOutcome, duelXpStake, type DuelOutcome } from '@/lib/duel';
 import { cardState, dailyStatsFor, nextCardProgress, todayKey, xpForAnswer } from '@/lib/flashcards';
 import { coinsForStep, playerLevel } from '@/lib/progression';
+import { totalXp as sumXp } from '@/lib/school';
+import { useSchool } from '@/store/SchoolProvider';
 import type {
+  Activity,
   AvatarPalette,
   CardProgress,
   CardState,
@@ -24,6 +18,7 @@ import type {
   RankingEntry,
   RankingScope,
   Student,
+  StudentState,
   SubjectId,
 } from '@/types/game';
 
@@ -59,6 +54,8 @@ type GameContextValue = {
   positions: Record<RankingScope, number>;
   classPosition: number;
   isStepCompleted: (stepId: string) => boolean;
+  /** Atividades publicadas pelo professor para a turma do aluno. */
+  activities: Activity[];
   /** Marca uma etapa como estudada e credita XP na matéria + moedas. */
   completeStep: (activityId: string, stepId: string) => void;
 
@@ -69,7 +66,9 @@ type GameContextValue = {
 
   challenges: Challenge[];
   getClassmate: (id: string) => RankingEntry | undefined;
-  /** Envia um desafio e reserva a aposta. Retorna false se faltar moeda. */
+  /** Colegas só podem ser desafiados se forem da mesma turma. */
+  canChallenge: (classmateId: string) => boolean;
+  /** Envia um desafio e reserva a aposta. Retorna false se faltar moeda ou o colega for de outra turma. */
   sendChallenge: (input: NewChallenge) => boolean;
   /** Cancela um desafio enviado e devolve a aposta. */
   cancelChallenge: (challengeId: string) => void;
@@ -88,47 +87,44 @@ type GameContextValue = {
 
 const GameContext = createContext<GameContextValue | null>(null);
 
+const emptyXp: Record<SubjectId, number> = { matematica: 0, portugues: 0, historia: 0, ciencias: 0 };
+
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [student, setStudent] = useState<Student>(initialStudent);
+  const school = useSchool();
+  const { roster, getStudent, getClass, addXp, activities, cosmetics, recordSale } = school;
+
+  const [studentState, setStudentState] = useState<StudentState>(initialStudent);
   const [cardProgress, setCardProgress] = useState(() => createInitialCardProgress(Date.now()));
   const [dailyStats, setDailyStats] = useState(() => initialFlashcardDaily(todayKey(Date.now())));
   const [challenges, setChallenges] = useState<Challenge[]>(initialChallenges);
-  /** XP ganho/perdido pelos colegas em duelos. */
-  const [classmateXpDelta, setClassmateXpDelta] = useState<Record<string, number>>({});
 
-  const addSubjectXp = useCallback((subjectId: SubjectId, amount: number) => {
-    setStudent((prev) => ({
-      ...prev,
-      subjectXp: { ...prev.subjectXp, [subjectId]: Math.max(0, prev.subjectXp[subjectId] + amount) },
-    }));
-  }, []);
+  // O XP da aluna fica no cadastro da escola, para o professor enxergar (e dar bônus) na hora.
+  const record = getStudent(CURRENT_STUDENT_ID);
+  const subjectXp = record?.subjectXp ?? emptyXp;
 
   const addCoins = useCallback((amount: number) => {
-    setStudent((prev) => ({ ...prev, coins: prev.coins + amount }));
+    setStudentState((prev) => ({ ...prev, coins: prev.coins + amount }));
   }, []);
 
   const updateChallenge = useCallback((challengeId: string, patch: Partial<Challenge>) => {
     setChallenges((prev) => prev.map((item) => (item.id === challengeId ? { ...item, ...patch } : item)));
   }, []);
 
-  const completeStep = useCallback((activityId: string, stepId: string) => {
-    const activity = getActivity(activityId);
-    const step = activity?.steps.find((item) => item.id === stepId);
-    if (!activity || !step) return;
+  const completeStep = useCallback(
+    (activityId: string, stepId: string) => {
+      const activity = activities.find((item) => item.id === activityId);
+      const step = activity?.steps.find((item) => item.id === stepId);
+      if (!activity || !step || studentState.completedStepIds.includes(stepId)) return;
 
-    setStudent((prev) => {
-      if (prev.completedStepIds.includes(stepId)) return prev;
-      return {
+      setStudentState((prev) => ({
         ...prev,
         coins: prev.coins + coinsForStep(step),
-        subjectXp: {
-          ...prev.subjectXp,
-          [activity.subjectId]: prev.subjectXp[activity.subjectId] + step.points,
-        },
         completedStepIds: [...prev.completedStepIds, stepId],
-      };
-    });
-  }, []);
+      }));
+      addXp(CURRENT_STUDENT_ID, activity.subjectId, step.points);
+    },
+    [activities, studentState.completedStepIds, addXp],
+  );
 
   // As respostas acontecem uma por vez (toque do aluno), então o estado lido aqui está sempre atualizado.
   const answerFlashcard = useCallback(
@@ -141,16 +137,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       setCardProgress((prev) => ({ ...prev, [cardId]: nextCardProgress(previous, correct, xp, now) }));
       setDailyStats({ date: today.date, xp: today.xp + xp, cards: today.cards + 1 });
-      if (xp > 0) addSubjectXp(subjectId, xp);
+      if (xp > 0) addXp(CURRENT_STUDENT_ID, subjectId, xp);
 
       return { xp, previousState, limitReached: correct && xp === 0 };
     },
-    [cardProgress, dailyStats, addSubjectXp],
+    [cardProgress, dailyStats, addXp],
+  );
+
+  const canChallenge = useCallback(
+    (classmateId: string) =>
+      classmateId !== CURRENT_STUDENT_ID && getStudent(classmateId)?.classId === studentState.classId,
+    [getStudent, studentState.classId],
   );
 
   const sendChallenge = useCallback(
     ({ rivalId, subjectId, questionCount, bet }: NewChallenge) => {
-      if (student.coins < bet) return false;
+      if (studentState.coins < bet || !canChallenge(rivalId)) return false;
       addCoins(-bet);
       setChallenges((prev) => [
         ...prev,
@@ -166,7 +168,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       ]);
       return true;
     },
-    [student.coins, addCoins],
+    [studentState.coins, canChallenge, addCoins],
   );
 
   const cancelChallenge = useCallback(
@@ -190,12 +192,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const challenge = challenges.find((item) => item.id === challengeId);
       if (!challenge || challenge.direction !== 'received') return false;
       if (challenge.status === 'accepted') return true;
-      if (challenge.status !== 'pending' || student.coins < challenge.bet) return false;
+      if (challenge.status !== 'pending' || studentState.coins < challenge.bet) return false;
       addCoins(-challenge.bet);
       updateChallenge(challengeId, { status: 'accepted' });
       return true;
     },
-    [challenges, student.coins, addCoins, updateChallenge],
+    [challenges, studentState.coins, addCoins, updateChallenge],
   );
 
   const finishDuel = useCallback(
@@ -206,101 +208,111 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const rivalScore = challenge.rivalScore ?? 0;
       const outcome = duelOutcome(myScore, rivalScore);
       const stake = duelXpStake(challenge.questionCount);
-      const rival = classmates[challenge.rivalId];
       let coinsDelta = 0;
       let xpDelta = 0;
 
       if (outcome === 'won') {
-        // Quem vence leva o dobro da aposta e rouba o XP em jogo (até o que o colega tiver).
-        xpDelta = Math.min(stake, Math.max(0, rival.xp + (classmateXpDelta[rival.id] ?? 0)));
+        // Quem vence leva o dobro da aposta e rouba o XP em jogo (até o que o colega tiver na matéria).
+        xpDelta = -addXp(challenge.rivalId, challenge.subjectId, -stake);
+        addXp(CURRENT_STUDENT_ID, challenge.subjectId, xpDelta);
         coinsDelta = challenge.bet;
         addCoins(challenge.bet * 2);
       } else if (outcome === 'lost') {
-        xpDelta = -Math.min(stake, student.subjectXp[challenge.subjectId]);
+        xpDelta = addXp(CURRENT_STUDENT_ID, challenge.subjectId, -stake);
+        addXp(challenge.rivalId, challenge.subjectId, -xpDelta);
         coinsDelta = -challenge.bet;
       } else {
         addCoins(challenge.bet);
       }
 
-      if (xpDelta !== 0) {
-        addSubjectXp(challenge.subjectId, xpDelta);
-        setClassmateXpDelta((prev) => ({ ...prev, [rival.id]: (prev[rival.id] ?? 0) - xpDelta }));
-      }
       updateChallenge(challengeId, { status: outcome, myScore });
-
       return { outcome, myScore, rivalScore, coinsDelta, xpDelta };
     },
-    [challenges, classmateXpDelta, student.subjectXp, addCoins, addSubjectXp, updateChallenge],
+    [challenges, addXp, addCoins, updateChallenge],
   );
 
-  const equipCosmetic = useCallback((cosmeticId: string) => {
-    const item = getCosmetic(cosmeticId);
-    if (!item) return;
-    setStudent((prev) =>
-      prev.ownedCosmeticIds.includes(cosmeticId)
-        ? { ...prev, equippedCosmetics: { ...prev.equippedCosmetics, [item.category]: cosmeticId } }
-        : prev,
-    );
-  }, []);
+  const equipCosmetic = useCallback(
+    (cosmeticId: string) => {
+      const item = cosmetics.find((cosmetic) => cosmetic.id === cosmeticId);
+      if (!item) return;
+      setStudentState((prev) =>
+        prev.ownedCosmeticIds.includes(cosmeticId)
+          ? { ...prev, equippedCosmetics: { ...prev.equippedCosmetics, [item.category]: cosmeticId } }
+          : prev,
+      );
+    },
+    [cosmetics],
+  );
 
   const buyCosmetic = useCallback(
     (cosmeticId: string) => {
-      const item = getCosmetic(cosmeticId);
-      if (!item || student.ownedCosmeticIds.includes(cosmeticId)) return false;
-      const level = playerLevel(Object.values(student.subjectXp).reduce((sum, xp) => sum + xp, 0)).level;
-      if ((item.requiredLevel && level < item.requiredLevel) || student.coins < item.price) return false;
+      const item = cosmetics.find((cosmetic) => cosmetic.id === cosmeticId);
+      if (!item || !item.active || studentState.ownedCosmeticIds.includes(cosmeticId)) return false;
+      const level = playerLevel(sumXp(subjectXp)).level;
+      if ((item.requiredLevel && level < item.requiredLevel) || studentState.coins < item.price) return false;
 
-      setStudent((prev) => ({
+      setStudentState((prev) => ({
         ...prev,
         coins: prev.coins - item.price,
         ownedCosmeticIds: [...prev.ownedCosmeticIds, cosmeticId],
         equippedCosmetics: { ...prev.equippedCosmetics, [item.category]: cosmeticId },
       }));
+      recordSale(cosmeticId);
       return true;
     },
-    [student],
+    [cosmetics, studentState, subjectXp, recordSale],
   );
 
   const value = useMemo<GameContextValue>(() => {
-    const totalXp = Object.values(student.subjectXp).reduce((sum, xp) => sum + xp, 0);
-    const avatar = buildAvatar(student.equippedCosmetics);
+    const xp = sumXp(subjectXp);
+    const avatar = buildAvatar(studentState.equippedCosmetics, cosmetics);
 
-    const classmateEntry = (id: string): RankingEntry | undefined => {
-      const classmate = classmates[id];
-      if (!classmate) return undefined;
-      return { ...classmate, xp: Math.max(0, classmate.xp + (classmateXpDelta[id] ?? 0)) };
+    const toEntry = (id: string): RankingEntry | undefined => {
+      const person = roster.find((item) => item.id === id);
+      if (!person) return undefined;
+      const isCurrentStudent = person.id === CURRENT_STUDENT_ID;
+      return {
+        id: person.id,
+        name: person.name,
+        classId: person.classId,
+        classroom: getClass(person.classId)?.name ?? '',
+        xp: sumXp(person.subjectXp),
+        avatar: isCurrentStudent ? avatar : person.avatar,
+        isCurrentStudent,
+      };
     };
 
-    const me: RankingEntry = {
-      id: CURRENT_STUDENT_ID,
-      name: student.name,
-      classroom: student.classroom,
-      xp: totalXp,
-      avatar,
-      isCurrentStudent: true,
+    const sortByXp = (ids: string[]) =>
+      ids.flatMap((id) => toEntry(id) ?? []).sort((a, b) => b.xp - a.xp);
+
+    const rankings = {
+      turma: sortByXp(roster.filter((person) => person.classId === studentState.classId).map((person) => person.id)),
+      instituicao: sortByXp(roster.map((person) => person.id)),
     };
-
-    const buildRanking = (scope: RankingScope) =>
-      [...rankingMembers[scope].flatMap((id) => classmateEntry(id) ?? []), me].sort((a, b) => b.xp - a.xp);
-
-    const rankings = { turma: buildRanking('turma'), instituicao: buildRanking('instituicao') };
     const positionIn = (scope: RankingScope) => rankings[scope].findIndex((entry) => entry.isCurrentStudent) + 1;
     const positions = { turma: positionIn('turma'), instituicao: positionIn('instituicao') };
 
     return {
-      student,
-      totalXp,
-      level: playerLevel(totalXp),
+      student: {
+        ...studentState,
+        classroom: getClass(studentState.classId)?.name ?? '',
+        streakDays: record?.streakDays ?? 0,
+        subjectXp,
+      },
+      totalXp: xp,
+      level: playerLevel(xp),
       rankings,
       positions,
       classPosition: positions.turma,
-      isStepCompleted: (stepId) => student.completedStepIds.includes(stepId),
+      isStepCompleted: (stepId) => studentState.completedStepIds.includes(stepId),
+      activities: activities.filter((item) => item.status === 'published' && item.classId === studentState.classId),
       completeStep,
       cardProgress,
       flashcardDaily: dailyStatsFor(dailyStats, Date.now()),
       answerFlashcard,
       challenges,
-      getClassmate: classmateEntry,
+      getClassmate: toEntry,
+      canChallenge,
       sendChallenge,
       cancelChallenge,
       declineChallenge,
@@ -311,13 +323,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       equipCosmetic,
     };
   }, [
-    student,
-    classmateXpDelta,
+    studentState,
+    subjectXp,
+    record?.streakDays,
+    roster,
+    activities,
+    cosmetics,
+    getClass,
     cardProgress,
     dailyStats,
     challenges,
     completeStep,
     answerFlashcard,
+    canChallenge,
     sendChallenge,
     cancelChallenge,
     declineChallenge,

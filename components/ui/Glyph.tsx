@@ -12,9 +12,50 @@ type Shape =
 type GlyphDef = { filled?: boolean; shapes: Shape[] };
 
 const path = (d: string): Shape => ({ kind: 'path', d });
+const rect = (x: number, y: number, width: number, height: number, rx: number): Shape => ({
+  kind: 'rect',
+  x,
+  y,
+  width,
+  height,
+  rx,
+});
+const circle = (cx: number, cy: number, r: number): Shape => ({ kind: 'circle', cx, cy, r });
 
 const glyphs = {
+  alert: { shapes: [path('M12 3 2 20h20z'), path('M12 10v4M12 17.5v.01')] },
   arrowDown: { shapes: [path('M12 5v14M19 12l-7 7-7-7')] },
+  bell: { shapes: [path('M6 16V11a6 6 0 0 1 12 0v5l2 2H4z'), path('M10 21h4')] },
+  calendar: { shapes: [rect(3, 5, 18, 16, 2), path('M3 10h18M8 3v4M16 3v4')] },
+  cap: { shapes: [path('M2 9l10-5 10 5-10 5z'), path('M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5M22 9v6')] },
+  chevronDown: { shapes: [path('m6 9 6 6 6-6')] },
+  chevronLeft: { shapes: [path('m15 6-6 6 6 6')] },
+  copy: { shapes: [rect(9, 9, 12, 12, 2), path('M5 15V5a2 2 0 0 1 2-2h10')] },
+  eye: { shapes: [path('M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z'), circle(12, 12, 3)] },
+  fileText: {
+    shapes: [path('M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'), path('M14 3v6h6M8 13h8M8 17h5')],
+  },
+  filter: { shapes: [path('M3 5h18l-7 8v6l-4 2v-8z')] },
+  flame: {
+    filled: true,
+    shapes: [path('M12 22c4 0 7-3 7-7 0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-3 2-5 5-5 8 0 4 3 7 7 7z')],
+  },
+  grid: { shapes: [rect(3, 3, 7, 7, 1.5), rect(14, 3, 7, 7, 1.5), rect(3, 14, 7, 7, 1.5), rect(14, 14, 7, 7, 1.5)] },
+  grip: { shapes: [path('M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01')] },
+  inbox: { shapes: [path('M3 13h5l2 3h4l2-3h5'), path('M5 5h14l2 8v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6z')] },
+  mail: { shapes: [rect(3, 5, 18, 14, 2), path('m3 7 9 6 9-6')] },
+  minus: { shapes: [path('M5 12h14')] },
+  monitor: { shapes: [rect(3, 4, 18, 12, 2), path('M12 16v5M8 21h8')] },
+  quiz: { shapes: [circle(12, 12, 9), path('M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01')] },
+  search: { shapes: [circle(11, 11, 7), path('m20 20-4-4')] },
+  send: { shapes: [path('M22 2 11 13M22 2l-7 20-4-9-9-4z')] },
+  sliders: {
+    shapes: [path('M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12'), circle(16, 6, 2), circle(10, 12, 2), circle(18, 18, 2)],
+  },
+  trash: { shapes: [path('M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14')] },
+  users: {
+    shapes: [circle(9, 8, 3.5), path('M2.5 20a6.5 6.5 0 0 1 13 0'), path('M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6')],
+  },
   arrowUp: { shapes: [path('M12 19V5M5 12l7-7 7 7')] },
   bolt: { filled: true, shapes: [path('M13 2 4 14h7l-1 8 9-12h-7z')] },
   book: {

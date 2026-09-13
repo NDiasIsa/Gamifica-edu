@@ -28,7 +28,7 @@ export function ChallengeBanner({ invites, sent, onPress }: ChallengeBannerProps
       </View>
       <View style={styles.text}>
         <Text style={styles.title}>Desafio de perguntas</Text>
-        <Text style={styles.subtitle}>Chame um colega para um duelo valendo XP</Text>
+        <Text style={styles.subtitle}>Chame um colega da sua turma para um duelo valendo XP</Text>
       </View>
       {badge && (
         <View style={styles.badge}>

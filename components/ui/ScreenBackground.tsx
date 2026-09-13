@@ -63,6 +63,11 @@ export const profileGlows: GlowSpec[] = [
   { left: 120, top: 120, width: 360, height: 320, color: colors.brand.primary, opacity: 0.32, blur: 60 },
 ];
 
+export const teacherGlows: GlowSpec[] = [
+  { left: 170, top: -150, width: 380, height: 320, color: colors.brand.primary, opacity: 0.32, blur: 60 },
+  { left: -160, top: 520, width: 300, height: 260, color: colors.accent.manaCyan, opacity: 0.1, blur: 60 },
+];
+
 export const rankingGlows: GlowSpec[] = [
   { left: 170, top: -150, width: 380, height: 320, color: colors.brand.primary, opacity: 0.35, blur: 60 },
   { left: -160, top: 540, width: 300, height: 260, color: colors.brand.magenta, opacity: 0.12, blur: 60 },

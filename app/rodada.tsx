@@ -8,11 +8,11 @@ import { StatTile } from '@/components/quiz/StatTile';
 import { Glyph } from '@/components/ui/Glyph';
 import { SubjectTag } from '@/components/ui/SubjectTag';
 import { colors, fonts, withAlpha } from '@/constants/theme';
-import { flashcards, topics } from '@/data/flashcards';
 import { subjects } from '@/data/mock';
 import { buildRound, CARD_XP, cardState, cardStateMeta } from '@/lib/flashcards';
 import { formatNumber } from '@/lib/progression';
 import { useGame } from '@/store/GameProvider';
+import { useSchool } from '@/store/SchoolProvider';
 import type { CardState } from '@/types/game';
 
 type AnswerLog = { previousState: CardState; correct: boolean; xp: number; limitReached: boolean };
@@ -21,6 +21,7 @@ export default function FlashcardRoundScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ topicos?: string; quantidade?: string }>();
   const { cardProgress, answerFlashcard } = useGame();
+  const { flashcards, topics } = useSchool();
 
   // A rodada é sorteada uma única vez, ao abrir a tela.
   const [questions] = useState(() =>

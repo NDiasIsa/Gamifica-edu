@@ -7,7 +7,6 @@ import { SectionLabel } from '@/components/ui/SectionLabel';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { SubjectPicker } from '@/components/ui/SubjectPicker';
 import { colors, fonts, withAlpha } from '@/constants/theme';
-import { flashcards, topics } from '@/data/flashcards';
 import { subjectOrder, subjects } from '@/data/mock';
 import {
   availableCards,
@@ -18,6 +17,7 @@ import {
   ROUND_SIZES,
 } from '@/lib/flashcards';
 import { useGame } from '@/store/GameProvider';
+import { useSchool } from '@/store/SchoolProvider';
 import type { CardState, SubjectId } from '@/types/game';
 
 type RoundSize = (typeof ROUND_SIZES)[number];
@@ -29,10 +29,10 @@ type RoundSetupSheetProps = {
   onStart: (topicIds: string[], size: number) => void;
 };
 
-const topicsOf = (subjectId: SubjectId) => topics.filter((topic) => topic.subjectId === subjectId);
-
 export function RoundSetupSheet({ initialSubjectIds, onClose, onStart }: RoundSetupSheetProps) {
   const { cardProgress, flashcardDaily } = useGame();
+  const { flashcards, topics } = useSchool();
+  const topicsOf = (subjectId: SubjectId) => topics.filter((topic) => topic.subjectId === subjectId);
   const [selectedTopicIds, setSelectedTopicIds] = useState(() =>
     initialSubjectIds.flatMap((id) => topicsOf(id).map((topic) => topic.id)),
   );

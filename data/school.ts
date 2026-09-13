@@ -1,0 +1,455 @@
+import { colors } from '@/constants/theme';
+import type {
+  AvatarPalette,
+  LateDelivery,
+  RosterStudent,
+  SchoolClass,
+  StudentNotice,
+  SubjectId,
+  Submission,
+  Teacher,
+} from '@/types/game';
+
+// Dados de exemplo da escola: professor, turmas, alunos e entregas.
+
+export const teacher: Teacher = {
+  name: 'Prof. Marcos Vieira',
+  avatar: {
+    background: ['#3B2F66', '#4C1D95'],
+    border: '#FACC15',
+    hat: '#FACC15',
+    hatShade: '#B45309',
+    star: '#D946EF',
+    hair: '#D1D5DB',
+    skin: '#E0AC69',
+    mouth: '#7C2D12',
+    robe: '#8B5CF6',
+    robeShade: '#5B21B6',
+    belt: '#FACC15',
+    staff: '#FACC15',
+    staffTip: '#F5F3FF',
+  },
+};
+
+const accuracy = (matematica: number, portugues: number, historia: number, ciencias: number) => ({
+  matematica,
+  portugues,
+  historia,
+  ciencias,
+});
+
+export const initialClasses: SchoolClass[] = [
+  {
+    id: '7B',
+    name: '7º Ano B',
+    shortName: '7B',
+    color: colors.brand.primary,
+    depthColor: colors.depth.primary,
+    inviteCode: 'EQ-7B42',
+    managed: true,
+    weeklyEngagement: 0.75,
+    averageAccuracy: 0.78,
+    weeklyXp: 12480,
+    accuracyBySubject: accuracy(0.72, 0.81, 0.64, 0.88),
+  },
+  {
+    id: '7A',
+    name: '7º Ano A',
+    shortName: '7A',
+    color: colors.accent.manaCyan,
+    depthColor: colors.depth.cyan,
+    inviteCode: 'EQ-7A18',
+    managed: true,
+    weeklyEngagement: 0.68,
+    averageAccuracy: 0.74,
+    weeklyXp: 10230,
+    accuracyBySubject: accuracy(0.69, 0.77, 0.71, 0.8),
+  },
+  {
+    id: '8C',
+    name: '8º Ano C',
+    shortName: '8C',
+    color: colors.accent.hpPink,
+    depthColor: colors.depth.pink,
+    inviteCode: 'EQ-8C07',
+    managed: true,
+    weeklyEngagement: 0.52,
+    averageAccuracy: 0.66,
+    weeklyXp: 7640,
+    accuracyBySubject: accuracy(0.61, 0.7, 0.68, 0.66),
+  },
+  // Turmas de outros professores (aparecem só no ranking da instituição).
+  ...(['9A', '9B', '6A'] as const).map((id) => ({
+    id,
+    name: `${id[0]}º Ano ${id[1]}`,
+    shortName: id,
+    color: colors.accent.xpGold,
+    depthColor: colors.depth.gold,
+    inviteCode: `EQ-${id}00`,
+    managed: false,
+    weeklyEngagement: 0,
+    averageAccuracy: 0,
+    weeklyXp: 0,
+    accuracyBySubject: accuracy(0, 0, 0, 0),
+  })),
+];
+
+/** Divide o XP total entre as matérias com pesos (matemática, português, história, ciências). */
+function splitXp(total: number, weights: [number, number, number, number]): Record<SubjectId, number> {
+  const sum = weights.reduce((acc, weight) => acc + weight, 0);
+  const [matematica, portugues, historia] = weights.map((weight) => Math.round((total * weight) / sum));
+  return { matematica, portugues, historia, ciencias: total - matematica - portugues - historia };
+}
+
+const wizard = (
+  hat: string,
+  hatShade: string,
+  robe: string,
+  robeShade: string,
+  extra: Partial<AvatarPalette> = {},
+): AvatarPalette => ({
+  background: ['#3B2F66', hatShade],
+  border: hat,
+  hat,
+  hatShade,
+  star: '#FACC15',
+  hair: '#78350F',
+  skin: '#FDBA74',
+  mouth: '#BE185D',
+  robe,
+  robeShade,
+  belt: '#FACC15',
+  staff: '#A78BFA',
+  ...extra,
+});
+
+type RosterSeed = Omit<RosterStudent, 'subjectXp'> & { xp: number; weights?: [number, number, number, number] };
+
+const rosterSeed: RosterSeed[] = [
+  // 7º Ano B
+  {
+    id: 'lydia',
+    name: 'Lydia Santos',
+    classId: '7B',
+    enrollment: '2026-0142',
+    guardianEmail: 'familia.santos@email.com',
+    avatar: wizard('#8B5CF6', '#5B21B6', '#22D3EE', '#0E7490', { hair: '#F472B6' }),
+    xp: 0, // o XP da Lydia vem dos valores abaixo, definidos à parte
+    lastActiveDaysAgo: 0,
+    streakDays: 12,
+    delivered: 14,
+    assigned: 16,
+    late: 1,
+    flashcardAccuracy: 0.82,
+  },
+  {
+    id: 'pedro',
+    name: 'Pedro Almeida',
+    classId: '7B',
+    enrollment: '2026-0138',
+    avatar: wizard('#22D3EE', '#0E7490', '#4ADE80', '#15803D', {
+      star: '#F472B6',
+      skin: '#D6A77A',
+      mouth: '#7C2D12',
+      belt: '#F5F3FF',
+      staff: undefined,
+    }),
+    xp: 5310,
+    weights: [3, 2, 2, 2],
+    lastActiveDaysAgo: 2,
+    streakDays: 0,
+    delivered: 11,
+    assigned: 16,
+    late: 3,
+    flashcardAccuracy: 0.71,
+  },
+  {
+    id: 'ana',
+    name: 'Ana Beatriz',
+    classId: '7B',
+    enrollment: '2026-0131',
+    avatar: wizard('#F472B6', '#BE185D', '#FACC15', '#B45309', { hair: '#1F2937', belt: '#F5F3FF', staff: '#FDE68A' }),
+    xp: 5024,
+    weights: [2, 3, 2, 2],
+    lastActiveDaysAgo: 0,
+    streakDays: 21,
+    delivered: 16,
+    assigned: 16,
+    late: 0,
+    flashcardAccuracy: 0.9,
+  },
+  {
+    id: 'clara',
+    name: 'Clara Nunes',
+    classId: '7B',
+    enrollment: '2026-0133',
+    avatar: wizard('#FB923C', '#C2410C', '#22D3EE', '#0E7490', { hair: '#FDE68A' }),
+    xp: 4420,
+    weights: [2, 2, 2, 3],
+    lastActiveDaysAgo: 1,
+    streakDays: 6,
+    delivered: 15,
+    assigned: 16,
+    late: 0,
+    flashcardAccuracy: 0.86,
+  },
+  {
+    id: 'joao',
+    name: 'João Victor',
+    classId: '7B',
+    enrollment: '2026-0135',
+    avatar: wizard('#FACC15', '#B45309', '#8B5CF6', '#5B21B6', {
+      star: '#8B5CF6',
+      hair: '#1C1917',
+      skin: '#8D5A3B',
+      mouth: '#4A2511',
+      staff: undefined,
+    }),
+    xp: 4410,
+    weights: [3, 2, 2, 2],
+    lastActiveDaysAgo: 0,
+    streakDays: 9,
+    delivered: 14,
+    assigned: 16,
+    late: 1,
+    flashcardAccuracy: 0.78,
+  },
+  {
+    id: 'marina',
+    name: 'Marina Lopes',
+    classId: '7B',
+    enrollment: '2026-0140',
+    avatar: wizard('#4ADE80', '#15803D', '#F472B6', '#BE185D', { hair: '#B45309', skin: '#F5C9A0', belt: '#F5F3FF' }),
+    xp: 3960,
+    weights: [2, 2, 3, 2],
+    lastActiveDaysAgo: 5,
+    streakDays: 0,
+    delivered: 12,
+    assigned: 16,
+    late: 2,
+    flashcardAccuracy: 0.64,
+  },
+  {
+    id: 'bruno',
+    name: 'Bruno Costa',
+    classId: '7B',
+    enrollment: '2026-0132',
+    avatar: wizard('#8B5CF6', '#5B21B6', '#F472B6', '#BE185D', { hair: '#111827' }),
+    xp: 3870,
+    weights: [2, 2, 2, 2],
+    lastActiveDaysAgo: 0,
+    streakDays: 4,
+    delivered: 13,
+    assigned: 16,
+    late: 1,
+    flashcardAccuracy: 0.74,
+  },
+  {
+    id: 'diego',
+    name: 'Diego Ramos',
+    classId: '7B',
+    enrollment: '2026-0134',
+    avatar: wizard('#22D3EE', '#0E7490', '#4ADE80', '#15803D', { hair: '#9A3412' }),
+    xp: 3105,
+    weights: [2, 1, 2, 3],
+    lastActiveDaysAgo: 0,
+    streakDays: 3,
+    delivered: 12,
+    assigned: 16,
+    late: 1,
+    flashcardAccuracy: 0.69,
+  },
+
+  // 7º Ano A
+  {
+    id: 'gabriel',
+    name: 'Gabriel Souza',
+    classId: '7A',
+    enrollment: '2026-0101',
+    avatar: wizard('#D946EF', '#86198F', '#FACC15', '#B45309', { hair: '#1C1917', skin: '#C68B59' }),
+    xp: 3720,
+    weights: [2, 2, 2, 2],
+    lastActiveDaysAgo: 0,
+    streakDays: 7,
+    delivered: 9,
+    assigned: 10,
+    late: 0,
+    flashcardAccuracy: 0.77,
+  },
+  {
+    id: 'helena',
+    name: 'Helena Prado',
+    classId: '7A',
+    enrollment: '2026-0104',
+    avatar: wizard('#4ADE80', '#15803D', '#8B5CF6', '#5B21B6', { hair: '#FDE68A' }),
+    xp: 3410,
+    weights: [2, 3, 2, 2],
+    lastActiveDaysAgo: 1,
+    streakDays: 2,
+    delivered: 8,
+    assigned: 10,
+    late: 1,
+    flashcardAccuracy: 0.72,
+  },
+
+  // Outras turmas da instituição
+  {
+    id: 'camila',
+    name: 'Camila Rocha',
+    classId: '8C',
+    enrollment: '2025-0211',
+    avatar: wizard('#22D3EE', '#0E7490', '#D946EF', '#86198F', { belt: '#F5F3FF', staff: '#FDE68A' }),
+    xp: 9120,
+    weights: [2, 2, 2, 3],
+    lastActiveDaysAgo: 0,
+    streakDays: 30,
+    delivered: 9,
+    assigned: 9,
+    late: 0,
+    flashcardAccuracy: 0.93,
+  },
+  {
+    id: 'rafael',
+    name: 'Rafael Lima',
+    classId: '9A',
+    enrollment: '2024-0305',
+    avatar: wizard('#D946EF', '#86198F', '#22D3EE', '#0E7490', {
+      star: '#22D3EE',
+      hair: '#1C1917',
+      skin: '#C68B59',
+      mouth: '#7C2D12',
+      staff: undefined,
+    }),
+    xp: 9870,
+    weights: [3, 2, 2, 2],
+    lastActiveDaysAgo: 0,
+    streakDays: 40,
+    delivered: 0,
+    assigned: 0,
+    late: 0,
+    flashcardAccuracy: 0.9,
+  },
+  {
+    id: 'lucas',
+    name: 'Lucas Ferreira',
+    classId: '9B',
+    enrollment: '2024-0318',
+    avatar: wizard('#8B5CF6', '#5B21B6', '#F472B6', '#BE185D', { star: '#4ADE80', hair: '#FACC15', staff: undefined }),
+    xp: 8640,
+    weights: [2, 2, 3, 2],
+    lastActiveDaysAgo: 1,
+    streakDays: 15,
+    delivered: 0,
+    assigned: 0,
+    late: 0,
+    flashcardAccuracy: 0.85,
+  },
+  {
+    id: 'sofia',
+    name: 'Sofia Martins',
+    classId: '6A',
+    enrollment: '2026-0401',
+    avatar: wizard('#FACC15', '#B45309', '#22D3EE', '#0E7490', {
+      star: '#F472B6',
+      hair: '#1C1917',
+      skin: '#8D5A3B',
+      mouth: '#4A2511',
+      belt: '#F5F3FF',
+    }),
+    xp: 4390,
+    weights: [2, 2, 2, 2],
+    lastActiveDaysAgo: 3,
+    streakDays: 0,
+    delivered: 0,
+    assigned: 0,
+    late: 0,
+    flashcardAccuracy: 0.7,
+  },
+];
+
+const lydiaXp: Record<SubjectId, number> = { matematica: 2103, portugues: 858, historia: 1430, ciencias: 429 };
+
+export const initialRoster: RosterStudent[] = rosterSeed.map(({ xp, weights, ...student }) => ({
+  ...student,
+  subjectXp: student.id === 'lydia' ? lydiaXp : splitXp(xp, weights ?? [1, 1, 1, 1]),
+}));
+
+export const initialSubmissions: Submission[] = [
+  // Religiões Africanas (etapa 3 de Brasil Colonial)
+  ...(
+    [
+      ['lydia', 'há 2h', true],
+      ['pedro', 'há 3h', false],
+      ['ana', 'há 5h', false],
+      ['bruno', 'ontem', false],
+    ] as const
+  ).map(([studentId, sentLabel, isNew]) => ({
+    id: `entrega-religioes-${studentId}`,
+    studentId,
+    activityId: 'brasil-colonial',
+    stepId: 'brasil-colonial-3',
+    fileName: 'resumo-religioes-africanas.pdf',
+    fileInfo: '2 páginas · 480 KB',
+    sentLabel,
+    isNew,
+    status: 'pending' as const,
+  })),
+  // Colonialismo (etapa 2 de Brasil Colonial)
+  ...(
+    [
+      ['clara', 'ontem'],
+      ['diego', 'ontem'],
+      ['joao', 'há 2 dias'],
+      ['marina', 'há 2 dias'],
+      ['ana', 'há 3 dias'],
+    ] as const
+  ).map(([studentId, sentLabel]) => ({
+    id: `entrega-colonialismo-${studentId}`,
+    studentId,
+    activityId: 'brasil-colonial',
+    stepId: 'brasil-colonial-2',
+    fileName: 'fichamento-colonialismo.pdf',
+    fileInfo: '3 páginas · 610 KB',
+    sentLabel,
+    status: 'pending' as const,
+  })),
+  {
+    id: 'entrega-fracoes-lydia',
+    studentId: 'lydia',
+    activityId: 'fracoes-decimais',
+    stepId: 'fracoes-decimais-2',
+    fileName: 'exercicios-fracoes.pdf',
+    fileInfo: '1 página · 220 KB',
+    sentLabel: 'há 6 dias',
+    status: 'approved',
+    grade: 9,
+    xpAwarded: 81,
+    comment: 'Ótimo raciocínio nas conversões!',
+  },
+];
+
+export const initialLateDeliveries: LateDelivery[] = [
+  { id: 'atraso-pedro-solar', studentId: 'pedro', activityId: 'sistema-solar', dueLabel: 'prazo 10/09' },
+  { id: 'atraso-pedro-fracoes', studentId: 'pedro', activityId: 'fracoes-decimais', dueLabel: 'prazo 08/09' },
+  { id: 'atraso-marina-solar', studentId: 'marina', activityId: 'sistema-solar', dueLabel: 'prazo 10/09' },
+  { id: 'atraso-lydia-solar', studentId: 'lydia', activityId: 'sistema-solar', dueLabel: 'prazo 10/09' },
+];
+
+export const initialNotices: StudentNotice[] = [
+  {
+    id: 'aviso-boas-vindas',
+    studentId: 'lydia',
+    kind: 'message',
+    title: 'Prof. Marcos Vieira',
+    body: 'Nova trilha de História no ar! Comece pela etapa de slides.',
+    read: true,
+  },
+];
+
+/** Paletas sorteadas para alunos cadastrados pelo professor. */
+export const newStudentAvatars: AvatarPalette[] = [
+  wizard('#F472B6', '#BE185D', '#22D3EE', '#0E7490'),
+  wizard('#4ADE80', '#15803D', '#8B5CF6', '#5B21B6', { hair: '#1C1917' }),
+  wizard('#FB923C', '#C2410C', '#FACC15', '#B45309', { hair: '#FDE68A' }),
+  wizard('#22D3EE', '#0E7490', '#F472B6', '#BE185D', { skin: '#C68B59' }),
+];

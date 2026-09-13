@@ -2,19 +2,26 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useState } from 'react';
+
 import { ActivityCard } from '@/components/home/ActivityCard';
 import { CurrencyBar } from '@/components/home/CurrencyBar';
+import { NoticesSheet } from '@/components/home/NoticesSheet';
 import { ProfileCard } from '@/components/home/ProfileCard';
 import { Icon } from '@/components/ui/Icon';
 import { homeGlows, ScreenBackground } from '@/components/ui/ScreenBackground';
 import { colors, fonts } from '@/constants/theme';
-import { activities } from '@/data/mock';
 import { useGame } from '@/store/GameProvider';
+import { useSchool } from '@/store/SchoolProvider';
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { student, avatar, level, totalXp, classPosition } = useGame();
+  const { student, avatar, level, totalXp, classPosition, activities } = useGame();
+  const { notices } = useSchool();
+  const [noticesOpen, setNoticesOpen] = useState(false);
+
+  const unreadNotices = notices.filter((notice) => notice.studentId === student.id && !notice.read).length;
 
   const pendingActivities = activities.filter((activity) =>
     activity.steps.some((step) => !student.completedStepIds.includes(step.id)),
@@ -25,7 +32,12 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 6 }]}
         showsVerticalScrollIndicator={false}>
-        <CurrencyBar streakDays={student.streakDays} coins={student.coins} />
+        <CurrencyBar
+          streakDays={student.streakDays}
+          coins={student.coins}
+          unreadNotices={unreadNotices}
+          onPressNotifications={() => setNoticesOpen(true)}
+        />
 
         <ProfileCard
           student={student}
@@ -58,6 +70,8 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+
+      {noticesOpen && <NoticesSheet studentId={student.id} onClose={() => setNoticesOpen(false)} />}
     </ScreenBackground>
   );
 }

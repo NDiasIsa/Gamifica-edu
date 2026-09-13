@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon } from '@/components/ui/Icon';
+import { Glyph, type GlyphName } from '@/components/ui/Glyph';
 import { colors, fonts, solidShadow } from '@/constants/theme';
 
 type GradientButtonProps = {
@@ -10,10 +10,13 @@ type GradientButtonProps = {
   disabled?: boolean;
   /** md: textos longos, como "INICIAR RODADA DE PERGUNTAS". */
   size?: 'md' | 'lg';
+  /** Ícone antes do texto (no lugar do círculo de "play" à direita). */
+  leadingIcon?: GlyphName;
+  height?: number;
 };
 
 /** CTA principal (roxo → magenta) com sombra sólida "3D". */
-export function GradientButton({ label, onPress, disabled, size = 'lg' }: GradientButtonProps) {
+export function GradientButton({ label, onPress, disabled, size = 'lg', leadingIcon, height = 62 }: GradientButtonProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -25,13 +28,16 @@ export function GradientButton({ label, onPress, disabled, size = 'lg' }: Gradie
         colors={[colors.brand.primary, colors.brand.magenta]}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
-        style={styles.button}>
+        style={[styles.button, { height }]}>
+        {leadingIcon && <Glyph name={leadingIcon} size={20} strokeWidth={2.8} color={colors.text.onColor} />}
         <Text style={[styles.label, size === 'md' && styles.labelMd]} numberOfLines={1}>
           {label}
         </Text>
-        <View style={styles.playCircle}>
-          <Icon name="play" size={14} />
-        </View>
+        {!leadingIcon && (
+          <View style={styles.playCircle}>
+            <Glyph name="play" size={14} color={colors.text.onColor} />
+          </View>
+        )}
       </LinearGradient>
     </Pressable>
   );
@@ -50,11 +56,11 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   button: {
-    height: 62,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
+    paddingHorizontal: 12,
     borderRadius: 18,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.25)',

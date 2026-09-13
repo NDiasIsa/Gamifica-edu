@@ -18,16 +18,17 @@ import {
   StickyFooter,
 } from "@/components/ui/StickyFooter";
 import { colors, fonts, solidShadow } from "@/constants/theme";
-import { flashcards, topics } from "@/data/flashcards";
 import { subjectOrder, subjects } from "@/data/mock";
 import { deckStats } from "@/lib/flashcards";
 import { useGame } from "@/store/GameProvider";
+import { useSchool } from "@/store/SchoolProvider";
 import type { SubjectId } from "@/types/game";
 
 export default function FlashcardsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { cardProgress, flashcardDaily } = useGame();
+  const { flashcards, topics } = useSchool();
   /** Matérias pré-selecionadas no modal; null = modal fechado. */
   const [setupSubjects, setSetupSubjects] = useState<SubjectId[] | null>(null);
 

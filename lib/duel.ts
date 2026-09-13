@@ -1,7 +1,6 @@
-import { flashcards } from '@/data/flashcards';
 import { toQuestion } from '@/lib/flashcards';
 import { shuffle } from '@/lib/random';
-import type { SubjectId } from '@/types/game';
+import type { Flashcard, SubjectId } from '@/types/game';
 
 export const DUEL_QUESTION_COUNTS = [5, 10, 15] as const;
 export const DUEL_BETS = [25, 50, 100] as const;
@@ -19,8 +18,8 @@ export function duelOutcome(myScore: number, rivalScore: number): DuelOutcome {
 }
 
 /** Perguntas do duelo: qualquer card da matéria, sem alterar o progresso dos flashcards. */
-export function buildDuelRound(subjectId: SubjectId, questionCount: number) {
-  const pool = flashcards.filter((card) => card.subjectId === subjectId);
+export function buildDuelRound(cards: Flashcard[], subjectId: SubjectId, questionCount: number) {
+  const pool = cards.filter((card) => card.subjectId === subjectId);
   return shuffle(pool).slice(0, questionCount).map(toQuestion);
 }
 

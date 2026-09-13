@@ -6,8 +6,10 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+import { ToastProvider } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
 import { GameProvider } from '@/store/GameProvider';
+import { SchoolProvider } from '@/store/SchoolProvider';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -58,15 +60,21 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-      <GameProvider>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg.base } }}>
-          <Stack.Screen name="(tabs)" />
-          {/* Rodada de flashcards e duelo ocupam a tela toda, sem a BottomNav. */}
-          <Stack.Screen name="rodada" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
-          <Stack.Screen name="duelo/[id]" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
-        </Stack>
-      </GameProvider>
+      {/* SchoolProvider (conteúdo do professor) fica por fora: o app do aluno lê o que o professor publica. */}
+      <SchoolProvider>
+        <GameProvider>
+          <ToastProvider>
+            <StatusBar style="light" />
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg.base } }}>
+              <Stack.Screen name="(tabs)" />
+              {/* Rodada de flashcards e duelo ocupam a tela toda, sem a BottomNav. */}
+              <Stack.Screen name="rodada" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+              <Stack.Screen name="duelo/[id]" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+              <Stack.Screen name="professor" />
+            </Stack>
+          </ToastProvider>
+        </GameProvider>
+      </SchoolProvider>
     </ThemeProvider>
   );
 }

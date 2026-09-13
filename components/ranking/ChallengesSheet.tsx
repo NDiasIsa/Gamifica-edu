@@ -87,7 +87,7 @@ export function ChallengesSheet({ onClose, onPlay }: ChallengesSheetProps) {
 
       <View style={styles.section}>
         <SectionLabel label="DESAFIOS ENVIADOS" />
-        {sent.length === 0 && <Text style={styles.empty}>Toque na espada ao lado de um colega para desafiá-lo.</Text>}
+        {sent.length === 0 && <Text style={styles.empty}>Toque na espada ao lado de um colega da sua turma para desafiá-lo.</Text>}
         {sent.map((challenge) => {
           const rival = getClassmate(challenge.rivalId);
           if (!rival) return null;
